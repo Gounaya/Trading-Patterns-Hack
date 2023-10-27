@@ -1,8 +1,6 @@
-// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
-// © serkany88
 
 //@version=5
-indicator("Englulfing Pinbar [serkany88]", shorttitle = "Engulfing Pinbar", overlay=true, max_boxes_count=500)
+indicator("Englulfing 25 [OSM]", shorttitle = "Engulfing 25 | OSM", overlay=true, max_boxes_count=500)
 
 //Inputs
 Wicksize = input.float(defval= 30, title= "Wick Engulf Size %", minval = 1, maxval= 90, tooltip= "Top or Bottom Wick size compared to body of the candle. Recommended to keep it around at least 50% for below 15M timeframes and around 30% for 30M and above timeframes.")
