@@ -45,10 +45,10 @@ C_Doji = C_IsDojiBody and C_ShadowEquals
 patternLabelPosLow = low - (ta.atr(30) * 0.6)
 patternLabelPosHigh = high + (ta.atr(30) * 0.6)
 
-label_color_bullish = input(color.blue, "Label Color Bullish")
+label_color_bullish = input(color.new(color.green, 10), "Label Color Bullish")
 C_EngulfingBullishNumberOfCandles = 2
 C_EngulfingBullish = C_DownTrend and C_WhiteBody and C_LongBody and C_BlackBody[1] and C_SmallBody[1] and close >= open[1] and open <= close[1] and ( close > open[1] or open < close[1] )
 alertcondition(C_EngulfingBullish, title = "New pattern detected", message = "New Engulfing – Bullish pattern detected")
 if C_EngulfingBullish
     label.new(bar_index, patternLabelPosLow, text="BE", style=label.style_label_up, color = label_color_bullish, textcolor=color.white)
-bgcolor(ta.highest(C_EngulfingBullish?1:0, C_EngulfingBullishNumberOfCandles)!=0 ? color.new(color.blue, 90) : na, offset=-(C_EngulfingBullishNumberOfCandles-1))
+bgcolor(ta.highest(C_EngulfingBullish?1:0, C_EngulfingBullishNumberOfCandles)!=0 ? color.new(color.green, 80) : na, offset=-(C_EngulfingBullishNumberOfCandles-1))
