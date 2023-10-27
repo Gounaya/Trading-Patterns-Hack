@@ -1,0 +1,87 @@
+// This source code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © serkany88
+
+//@version=5
+indicator("Englulfing Pinbar [serkany88]", shorttitle = "Engulfing Pinbar", overlay=true, max_boxes_count=500)
+
+//Inputs
+Wicksize = input.float(defval= 30, title= "Wick Engulf Size %", minval = 1, maxval= 90, tooltip= "Top or Bottom Wick size compared to body of the candle. Recommended to keep it around at least 50% for below 15M timeframes and around 30% for 30M and above timeframes.")
+oppositeWick = input.float(defval=60, title="Opposite Wick Filter %", minval= 1, maxval= 100, tooltip ="The filter of opposite wick size as percentage, higher values means more relaxed detection.")
+colorbars = input.bool(true, title="Color Detected Bars")
+
+//Static Vars
+topWickSize         = math.abs  (math.max( close, open) - high)
+bottomWickSize      = math.abs  (math.min( close, open) - low)
+bodySize            = math.abs           ( close -open)
+
+//Functions for Engulfing Pinbars
+bullEngulfPinbar(float minRejectWick = 50.0, bool mustEngulfWick = true) =>
+    rejectionRule   = minRejectWick == 0.0 or (bottomWickSize / bodySize >= (minRejectWick / 100) and topWickSize / bodySize < (oppositeWick / 100))
+    result          = close[1] <= open[1] and close >= open[1] and open <= close[1] and rejectionRule and (not mustEngulfWick or (close >= high[1] and low < low[1])) and bodySize > 0
+
+bearEngulfPinbar(float minRejectWick = 50.0, bool mustEngulfWick = true) =>
+    rejectionRule   = minRejectWick == 0.0 or (topWickSize / bodySize >= (minRejectWick / 100) and bottomWickSize / bodySize < (oppositeWick / 100))
+	result          = close[1] >= open[1] and close <= open[1] and open >= close[1] and rejectionRule and (not mustEngulfWick or (close <= low[1] and high > high[1])) and bodySize > 0
+
+// et Variables
+bulldetected = bullEngulfPinbar(Wicksize, true)
+beardetected = bearEngulfPinbar(Wicksize, true)
+
+//HTF DETECTIONS AND DRAWINGS
+enableHTF = input.bool(false, title="Enable HTF Checks", tooltip="Also checks higher time frame conditions and draws on your chart as boxes if enabled.", group="Higher TF")
+htf = input.timeframe('', 'Higher Time Frame', group="Higher TF")
+thickWick = true
+ascColor = color.green
+descColor = color.red
+
+ctfCandleDeltaTime() =>
+    if timeframe.isseconds
+        timeframe.multiplier * 1000
+    else if timeframe.isminutes
+        timeframe.multiplier * 1000 * 60
+    else if timeframe.isdaily
+        timeframe.multiplier * 1000 * 60 * 1440
+    else if timeframe.isweekly
+        timeframe.multiplier * 1000 * 60 * 1440 * 7
+    else if timeframe.ismonthly
+        timeframe.multiplier * 1000 * 60 * 1440 * 30
+    else
+        0
+
+var bodies = array.new_box()
+var wicks = array.new_box()
+var color bodyColor = na
+var color wickColor = na
+
+[htfO, htfH, htfL, htfC, htfOpenTime, htfCloseTime, htfbull, htfbear] = request.security(syminfo.tickerid, htf, [open, high, low, close, time, time_close, bullEngulfPinbar(Wicksize, true), bearEngulfPinbar(Wicksize, true)])
+
+if array.size(bodies) == 500 / 2
+    box.delete(array.shift(bodies))
+    box.delete(array.shift(wicks))
+
+bodyTop = math.max(htfO, htfC)
+bodyBottom = math.min(htfO, htfC)
+wickLeft = htfOpenTime + (htfCloseTime - htfOpenTime) / 2 - ctfCandleDeltaTime()
+wickRight = htfCloseTime - (htfCloseTime - htfOpenTime) / 2 + ctfCandleDeltaTime() / 2
+bodyColor := htfO > htfC ? color.new(descColor, 60) : htfO < htfC ? color.new(ascColor, 60) : bodyColor
+wickColor := htfO > htfC ? color.new(descColor, 80) : htfO < htfC ? color.new(ascColor, 80) : wickColor
+
+if enableHTF and (htfbull or htfbear)
+    array.push(bodies, box.new(htfOpenTime, bodyTop, htfCloseTime, bodyBottom, bodyTop == bodyBottom ? bodyColor : na, xloc=xloc.bar_time, bgcolor=bodyColor))
+    array.push(wicks, box.new(thickWick ? htfOpenTime : wickLeft, htfH, thickWick ? htfCloseTime : wickRight, htfL, na, xloc=xloc.bar_time, bgcolor=wickColor))
+
+
+//Barcolor and Plots
+barcolor(color = bulldetected and colorbars ? color.lime : beardetected and colorbars ? color.rgb(255, 0, 0) : na)
+plotshape(bulldetected, title="Bull Pinbar Engulfing", style=shape.triangleup, location = location.belowbar, color=color.lime, size=size.small)
+plotshape(beardetected, title="Bear Pinbar Engulfing", style=shape.triangledown, location = location.abovebar, color=color.rgb(255, 0, 0), size=size.small)
+
+//Functional and Manual Alerts
+if bulldetected  or (enableHTF ? htfbull : false)
+    alert("Bullish Engulfing Pinbar Detected", alert.freq_once_per_bar_close)
+
+if beardetected or (enableHTF ? htfbear : false)
+    alert("Bearish Engulfing Pinbar Detected", alert.freq_once_per_bar_close)
+
+alertcondition(bulldetected or (enableHTF ? htfbull : false), "Bullish Engulfing Pinbar", "Bullish Engulfing Pinbar Detected")
+alertcondition(beardetected or (enableHTF ? htfbear : false), "Bearish Engulfing Pinbar", "Bearish Engulfing Pinbar Detected")
